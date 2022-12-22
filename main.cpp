@@ -7,7 +7,7 @@
 #include <iostream>
 #include <cmath>
 #include <vector>
-#include "excerptMod2.h"
+#include "excerpt.h"
 #include <complex>
 
 #define PRINT true // for printing results of tests
@@ -395,7 +395,7 @@ void testQuarticAdv(const int testCount, const fp_t dist){
 int main(){
     setlocale(LC_ALL, "ru");
     cout<<setprecision(12);
-    const int testCount = 1000'000; // total number of tests
+    const int testCount = 100'000; // total number of tests
     const fp_t dist = 1e-5;  // maximum distance between roots
 
 
