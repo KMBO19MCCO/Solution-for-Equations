@@ -1,297 +1,406 @@
+// Written by: Pashshoev Bakhtierzhon KMBO-04-19
+// Contains functions to solve ______ equations:
+    // QUADRATIC ---> quadraticEqSolve(a, b, c, &roots)
+    // CUBIC -------> cubicEqSolve(a, b, c, d, &roots)
+    // QUARTIC -----> quarticEqSolve(a, b, c, d, e, &roots)
+
 #include <iostream>
 #include <cmath>
 #include <vector>
+#include "excerptMod2.h"
+#include <complex>
+
+#define PRINT true // for printing results of tests
+
 using namespace std;
 
+//typedef long double fp_t;
 //typedef double fp_t;
 typedef float fp_t;
 
-template <typename fp_t>
-int sgn(fp_t val) {
-    return (fp_t(0) < val) - (val < fp_t(0));
-}
+//______________________            HELPER FUNCTIONS        ______________________
 
-template <typename fp_t>
-int discriminant(fp_t a, fp_t b, fp_t c, vector<fp_t> &roots){
-    //a, b, c - coefficients of equation
-    //roots - a container to put roots. Size must be >= 2
-
-    //returns: number of real roots
-    if (!a)
-        return 0;
-    b/=a;
-    c/=a;
-    a/=a;
-    fp_t D= fma(b,b, -4*a*c);
-    if(D < 0)
-        return 0;
-    fp_t chisl=abs(b)+ sqrt(D);
-    fp_t znam=-2*a*sgn<fp_t>(b);
-    roots[0] =chisl/znam;
-    if(!roots[0])
-        roots[1]=c/roots[0];
-    else
-        roots[1]=roots[0];
-    return 2;
-}
-
+// Flexible comparison of 2 floating point variables
 template<typename fp_t>
-int completingTheSquare(fp_t a, fp_t b, fp_t c, vector<fp_t> &roots){
-    //a, b, c - coefficients of equation
-    //roots - a container to put roots. Size must be >= 2
-
-    //returns: number of real roots
-    if (!a)
-        return 0;
-    b/=a;
-    c/=a;
-    a/=a;
-    fp_t x1,x2, h=-b/2, k=fma(h,h, -c); ///////////
-    if (k < 0)
-        return 0;
-    roots[0]=h+sqrt(k);
-    roots[1]=h-sqrt(k);
-
+inline bool isEqual(const fp_t  &A, const fp_t  &B)
+{
+    return abs(A - B) < numeric_limits<fp_t>::epsilon() * (abs(B) + abs(A)) * 0.5;
 }
 
+// Flexible comparison to zero
+template<typename  fp_t>
+inline bool isZero( const fp_t &x )
+{ return FP_ZERO == std::fpclassify(x); }
+
+// Suppression cubic member of quartic
+// x^4+b*x^3+c*x^2+dx+e  ---> y^4 + px^2 + qx + r, x = y - b/4
 template<typename fp_t>
-int quadTrigAude(fp_t a, fp_t b, fp_t c, vector<fp_t> &roots){
-    // Trigonometric solution for quadratic equation
-    //a, b, c - coefficients of equation
-    //roots - a container to put roots. Size must be >= 2
+inline void preProcessing(fp_t  b, fp_t  c, fp_t d, fp_t  e, fp_t & p, fp_t &q,fp_t &r ){
+    // p = -3/8 * b^2 + c
+    p = fma<fp_t>(-b * static_cast<fp_t>(0.375L) ,b, c);
+    // q = b^3 / 8 - b*c/2 + d = b/2 (b^2 * 0.25 - c) + d
+    q = fma<fp_t>(static_cast<fp_t>(0.5L) * b,
+                  fma<fp_t>(static_cast<fp_t>(0.25L) * b, b, -c),d);
+    // r = -3 * pow(b, 4)/256 + b*b*c / 16 - b*d / 4 + e;
+    r = fma<fp_t>(static_cast<fp_t>(0.25L) * b, fma<fp_t>(static_cast<fp_t>(0.25L) * b,
+                                                          fma<fp_t>(static_cast<fp_t>(-0.1875L)*b, b, c),-d), e);
+}
 
-    //returns: number of real roots
-    if (!a || !b && c>0){
-        return 0;
-    }
+// Flexible suppression imaginary part of complex number
+template<typename fp_t>
+inline complex<fp_t> epsilonComplex(const complex<fp_t> &x)
+{
+    return abs(x) * numeric_limits<fp_t>::epsilon() > abs(x.imag()) ? complex<fp_t>(x.real(), 0) : x;
+}
 
-    fp_t x1,x2, alfa, pi = static_cast<fp_t>(numbers::pi);
-    b/=a; c/=a; a/=a;
+//______________________            MAIN FUNCTIONS        ______________________
 
-    if (!c){
-        roots[0]=0;
-        roots[1]=-b;
-        return 2;
-    }
+// QUADRATIC: ax^2 + bx + c = 0
+// roots - a container to put roots. Size must be >= 2
+// returns: number of real roots
+// Reference:
+    // The Solutions of the Quadratic Equation Obtained by the Aid of the Trigonometry
+    // Author(s): H. T. R. Aude
+    // Source: National Mathematics Magazine, Vol. 13, No. 3 (Dec., 1938), pp. 118-121
+    // Published by: Mathematical Association of America
+    // Stable URL: http://www.jstor.org/stable/3028750
+template<typename fp_t>
+int quadraticEqSolve(fp_t a, fp_t b, fp_t c, vector<fp_t> &roots){
+    // Normalizing
+    if(isinf(b /= a))  return 0;
+    if(isinf(c /= a)) return 0;
+    a = 1;
+
+    // constants
+    const fp_t oneHalf=static_cast<fp_t>(0.5L);
+    const fp_t pi = static_cast<fp_t>(numbers::pi);
+
+    // temp variables
+    fp_t sqrC, tang, tmp;
+    complex<fp_t> alfa;
 
     if (c < 0){
-        alfa=pi/2 - atan(-b/(2 * sqrt(-c)));
-        x1=sqrt(-c/a)*1/tan(alfa/2);
-        x2=-sqrt(-c/a)*tan(alfa/2);
-    }
-    else if (b >= 2*sqrt(c)){
-        alfa=std::asin(-2*sqrt(c)/b);
-        x1=sqrt(c/a)*1/tan(alfa/2);
-        x2=sqrt(c/a)*tan(alfa/2);
-    }
-    else{
-        return 0; // D < 0 => No real roots
-    }
+        sqrC = sqrt(-c);
+        tmp = -b/(2 * sqrC);
+        if(isinf(tmp)) return 0;// check if there is no inf
+        alfa = epsilonComplex<fp_t>(-atan<fp_t>(tmp));
 
-    roots[0]=x1;
-    roots[1]=x2;
-    return 2;
+        if (! alfa.imag()) {
+            tang = tan(fma<fp_t>(pi, oneHalf, alfa.real()) * oneHalf);
+            roots[0] = -sqrC * tang;
+            roots[1]= sqrC / tang;
+
+            if(isinf(roots[1])) return 1; // check if there is no inf
+            return 2;
+        }
+        return 0; // No real roots
+    }
+    else if (abs(b) >= 2 * sqrt(c)){
+        sqrC = sqrt(c);
+        tmp = -2 * sqrC / b;
+        if(isinf(tmp)) return 0; // check if there is no inf
+        alfa = epsilonComplex(asin<fp_t>(tmp));
+        tang = tan(alfa.real() * oneHalf);
+
+        if(!alfa.imag()){
+            roots[0] = sqrC * tang;
+            roots[1] = sqrC / tang;
+
+            if(isinf(roots[1])) return 1; // check if there is no inf
+            return 2;
+        }
+        return 0; // No real roots
+    }
+    return 0; // D < 0 => No real roots
 }
 
+
+// CUBIC: ax^3 + bx^2 + cx + d = 0
+// roots - a container to put roots. Size must be >= 3
+// returns: number of real roots
+// Reference:
+    // Author: Not found
+    // File Name: Algorithm to find the real roots of the cubic equation-computation_flow_chart.pdf
 template<typename fp_t>
-int cubicEqSolution(fp_t a, fp_t b, fp_t c, fp_t d, vector<fp_t> &roots){
-    //a, b, c, d - coefficients of equation
-    //roots - a container to put roots. Size must be >= 3
+int cubicEqSolve(fp_t a, fp_t b, fp_t c, fp_t d, vector<fp_t> &roots){
 
-    //returns: number of real roots
-    if (!a) // it's not a cubic
-        return 0;
+    // Normalizing
+    if(isinf(b /= a)) return 0;
+    if(isinf(c /= a)) return 0;
+    if(isinf(d /= a)) return 0;
+    a = 1;
 
-    fp_t e,f,g, tmp, h, i, j;// var's that will need for computation
-    fp_t x1, x2, x3; // roots
-    fp_t pi=static_cast<fp_t>(numbers::pi);
+    fp_t e,f,g, h, i, absI, j, tmp;// temp variables that will need for computation several times (>=3)
+    int numOfRoots = 0; // total number of roots
+    // constants
+    const fp_t oneThird = static_cast<fp_t>(1.0L/3.0L); // temp var, will use it 7 times
+    const fp_t pi = static_cast<fp_t>(numbers::pi);
+    const fp_t piThird = pi * oneThird;
 
-    e=b/(3*a);
-    f=fma<fp_t>(-b,e,c)/a;
-    tmp=fma<fp_t>(c,e, -d);
-    g=fma<fp_t>(-2*a,pow<fp_t>(e,3),tmp)/a;
+    // temp computations
+    e = b * oneThird;
+    f = fma<fp_t>(-b,e,c);
+    g = fma<fp_t>(-2,pow<fp_t>(e, 3),fma<fp_t>(c,e, -d));
+    h = sqrt(abs(f) * 4 * oneThird);
 
-    // triple root
-    fp_t oneThird=static_cast<fp_t>(1.0L/3);
-    if (!f){
-        x1=fma<fp_t>(pow<fp_t>(g,oneThird),1,-e);
-        cout<<"Triple root\n";
-        roots[0]=x1;
-        roots[1]=x1;
-        roots[2]=x1;
+    if (isZero<fp_t>(f)){// CASE 0: Triple root
+        roots[0] = roots[1] = roots[2] = - e;
         return 3;
     }
-    h = sqrt(4*abs(f)/3);
-    i = 4*g/pow<fp_t>(h,3);
 
-    //one real root
-    if (f>0){
-        x1=fma<fp_t>(h,sinh(asinh(i)/3),-e);
-        roots[0]=x1;
+    i = 4 * g / pow<fp_t>(h, 3);
+    absI = abs(i);
+    if (isinf(i)) return 0; // checking for inf
 
-        cout<<"Only one root1\n";
-        return 1;
+    //CASE 1: Only one real root
+    if (f > 0){
+        roots[0] = fma<fp_t>(h,sinh(asinh(i) * oneThird),-e);
+        numOfRoots = 1;
     }
-    fp_t absI=abs(i);
-    if (absI>1){
-        x1=fma<fp_t>(h*i/absI,cosh(acosh(absI)/3),-e);
-        roots[0]=x1;
-
-        cout<<"Only one root2\n";
-        return 1;
+    else if (absI > 1){
+        tmp = h * i/absI;
+        if(isinf(tmp)) return 0;
+        roots[0] = fma<fp_t>(tmp,cosh(acosh(absI) * oneThird),-e);
+        numOfRoots = 1;
     }
-
-    // 3 различные корни или существует корень кратности 2
-    j=acos(i)/3;
-    x1=fma<fp_t>(h, cos(j), -e);
-    x2=fma<fp_t>(h, cos(2*pi/3+j), -e);
-    roots[0]=x1;
-    roots[1]=x2;
-    if (j==0){
-        cout<<"j="<<j<<endl;
-        roots[2]=x2;
-        cout<<"2 unique roots\t"<<endl;
+    else // CASE 2: Three real roots
+    {
+        j = acos(i) * oneThird;
+        roots[0] = fma<fp_t>(h, cos(j), -e);
+        roots[1] = fma<fp_t>(h, cos(fma<fp_t>(2, piThird, j)), -e);
+        if (isZero(j))
+            roots[2] = roots[1];
+        else if(isEqual(j, piThird))
+            roots[2] = roots[0];
+        else
+            roots[2] = fma<fp_t>(h, cos(fma<fp_t>(2, piThird, -j)), -e);
+        numOfRoots = 3;
     }
-    else if(j==pi/3){
-        cout<<"j="<<j<<endl;
-        roots[2]=x1;
-        cout<<"2 unique roots\t"<<endl;
-    }
-    else{
-        roots[2]=fma<fp_t>(h, cos(2*pi/3-j), -e);
-        cout<<"3 unique roots\t"<<endl;
-    }
-    return 3;
+    return numOfRoots;
 }
 
+
+// QUARTIC: ax^4 + b*x^3 + cx^2 + dx + e = 0
+// roots - a container to put roots. Size must be >= 4
+// returns: number of real roots
+// Reference:
+    // On the Solution of the Real Quartic
+    // Author(s): William F. Carpenter,
+    // Source: Mathematics Magazine, Vol. 39, No. 1 (Jan., 1966), pp. 28-30
+    // Published by: Mathematical Association of America
+    // Stable URL: http://www.jstor.org/stable/2688990
 template<typename fp_t>
-int quarticCruchagaGarver(fp_t a, fp_t b, fp_t c, fp_t d, fp_t e, vector<fp_t> &roots){
-    // Method described by Garver, updated version of Cruchaga's
-    // Solves equation like: ax^4 + cx^2 + dx + e (without cubic (b*x^3) member)
-    //a, b, c, d, e - coefficients of equation
-    //roots - a container to put roots. Size must be >= 3
+int quarticEqSolve(fp_t a, fp_t b, fp_t c, fp_t d, fp_t e, vector<fp_t> &roots){
 
-    //returns: number of real roots
-    if (!a || b){
-        return 0;
-    }
-    b/=a; c/=a; d/=a; e/=a; a/=a;
+    // Normalizing
+    if(isinf(b /= a))  return 0;
+    if(isinf(c /= a)) return 0;
+    if(isinf(d /= a)) return 0;
+    if(isinf(e /= a)) return 0;
+    a = 1;
+    int numOfRoots = 0; // total number of found roots
 
-    fp_t newC=fma<fp_t>(c,c,-4*e);
+    // x^4+b*x^3+c*x^2+dx+e  ---> y^4 + cx^2 + dx + e, x = y - b/4
+    preProcessing(b,c,d,e, c, d, e);
 
-    fp_t k1, k2, k3;
+    // getting roots from specific cubic equation
     vector<fp_t> cubicRoots(3);
-    int numOfRoots= cubicEqSolution<fp_t>(a,2*c,newC,-d*d, cubicRoots);
+    const int cnumOfRoots = cubicEqSolve<fp_t>(a,2*c,pr_product_difference<fp_t>(c,c,4, e),fma<fp_t>(-d, d, 0), cubicRoots);
 
-    if (numOfRoots==3){
-        k1=sqrt(cubicRoots[0]);
-        k2=sqrt(cubicRoots[1]);
-
-        fp_t tmpRoot=sqrt(cubicRoots[2]);
-        fp_t tmpProd=k1*k2*tmpRoot;
-        if (tmpProd==-d){
-            k3=tmpRoot;
-        }else{
-            k3=-tmpRoot;
-        }
-        roots[0]=(k1+k2+k3)/2;
-        roots[1]=(k1-k2-k3)/2;
-        roots[2]=(-k1+k2-k3)/2;
-        roots[3]=(-k1-k2+k3)/2;
-        return 4;
-    }
-    return 0;
-}
-
-template<typename fp_t>
-int quarticCarpenter(fp_t a, fp_t b, fp_t c, fp_t d, fp_t e, vector<fp_t> &roots){
-    //Method described by Carpenter
-    //Solves equation like: ax^4 + cx^2 + dx + e (without cubic (b*x^3) member)
-    //a, b, c, d, e - coefficients of equation
-    //roots - a container to put roots. Size must be >= 3
-
-    //returns: number of real roots
-    if (!a || b){
-        return 0;
-    }
-    b/=a; c/=a; d/=a; e/=a; a/=a;
-    fp_t newC=fma<fp_t>(c,c,-4*e);
-
-    vector<fp_t> cubicRoots(3);
-    int numOfRoots = cubicEqSolution<fp_t>(a,2*c,newC,-d*d, cubicRoots);
+    // getting a positive root from cubic solution
     fp_t r;
-    if(cubicRoots[0]>0) r=cubicRoots[0];
-    else if(numOfRoots > 1 && cubicRoots[1]>0) r=cubicRoots[1];
-    else if(numOfRoots > 1 &&  cubicRoots[2]>0) r=cubicRoots[2];
+    const fp_t zero = static_cast<fp_t>(0.0L);
+    const fp_t oneHalf = static_cast<fp_t>(0.5L), minusOneFourth = static_cast<fp_t>(-0.25L);
+
+    if(cnumOfRoots && cubicRoots [0] > zero) r = cubicRoots[0];
+    else if(cnumOfRoots > 1 && cubicRoots[1] > zero) r = cubicRoots[1];
+    else if(cnumOfRoots > 1 && cubicRoots[2] > zero) r = cubicRoots[2];
     else return 0;
 
-    fp_t r1=sqrt(r);
-    fp_t tmp1=fma<fp_t>(-r/4,1,-c/2);
-    fp_t tmp2=sqrt(fma<fp_t>(tmp1, 1,-d/(2*r1)));
-    roots[0]=fma<fp_t>(r1/2,1,tmp2);
-    roots[1]=fma<fp_t>(r1/2,1,-tmp2);
+    // variables
+    const fp_t r1 = sqrt(r);
+    const fp_t tmp1 = pr_product_difference<fp_t>(r, minusOneFourth, c, oneHalf);
+    const fp_t tmp2 = 1/(2 * r1);
 
-    fp_t tmp3=sqrt(fma<fp_t>(d, 1/(2*r1),tmp1));
-    roots[2]=fma<fp_t>(r1/2,1,tmp3);
-    roots[3]=fma<fp_t>(r1/2,1,-tmp3);
+    if(isinf(tmp2)) return 0;
 
-    return 4;
+    const complex<fp_t> t1 = epsilonComplex<fp_t>(sqrt<fp_t>(fma<fp_t>(-d, tmp2,tmp1)));
+    const complex<fp_t> t2 = epsilonComplex<fp_t>(sqrt<fp_t>(fma<fp_t>(d, tmp2,tmp1)));
+
+    if (isZero(t1.imag())){
+        roots[0] = fma<fp_t>( b , minusOneFourth,fma<fp_t>(r1,oneHalf,t1.real()));
+        roots[1] = fma<fp_t>( b , minusOneFourth,fma<fp_t>(r1,oneHalf,-t1.real()));
+        numOfRoots +=2;
+    }
+    if (isZero(t2.imag())){
+        roots[numOfRoots] = fma<fp_t>( b , minusOneFourth,fma<fp_t>(-r1,oneHalf,t2.real()));
+        roots[numOfRoots + 1] = fma<fp_t>( b , minusOneFourth,fma<fp_t>(-r1,oneHalf,-t2.real()));
+        numOfRoots +=2;
+    }
+    return numOfRoots;
 }
 
 
 
-void testQuadratic(){
+//______________________            TESTER FUNCTIONS        ______________________
 
-    fp_t a=1.0,b=2.0,c=-4.0;
-    vector<fp_t> res2(2);
-    int num_of_roots = quadTrigAude<fp_t>(a,b,c,res2);
 
-    if (num_of_roots){
-        cout<<"x1 ="<<res2[0]<<" x2 = "<<res2[1];
+// Function to test quadratic solution:
+// testCount - total count of tests
+// dist - maximum distance between roots
+template<typename fp_t>
+void testQuadraticAdv(const int testCount, const fp_t dist){
+    int const P=2; // power
+    fp_t const low=-1, high=1; // [low, high]
+    fp_t absMaxError, relMaxError; // variables for each test Errors
+    int numOfFoundRoots, cantFind = 0;
+
+    fp_t maxAbsAllofTest = -1, maxRelAllofTest = -1; // maximum from maxAbsoluteError and maxRelError from all [testCount] tests
+
+    long double absErrors = 0;
+    long double relError = 0;
+
+    vector<fp_t> coefficients(P+1);
+    vector<fp_t> trueRoots(P);
+
+    for(int i=0; i < testCount; ++i){
+        vector<fp_t> foundRoots(P);
+        generate_polynomial<fp_t>(P, 0, 2, 0, dist,
+                                  low, high, trueRoots, coefficients);
+
+        numOfFoundRoots = quadraticEqSolve<fp_t>(coefficients[2],coefficients[1],coefficients[0], foundRoots);
+
+        if(!numOfFoundRoots){
+            cantFind++;
+        }
+        else{
+            compare_roots<fp_t>(numOfFoundRoots, 2, foundRoots, trueRoots, absMaxError, relMaxError);
+            maxAbsAllofTest = absMaxError > maxAbsAllofTest ? absMaxError : maxAbsAllofTest;
+            absErrors += absMaxError;
+            maxRelAllofTest = relMaxError > maxRelAllofTest ? relMaxError : maxRelAllofTest;
+            relError += relMaxError;
+        }
     }
-    else{
-        cout<<"No real roots\n";
+    if(PRINT){
+        cout<<"\n\n\t\t\tQUADRATIC TEST RESULTS\n\n";
+        cout<<"Max distance: "<< dist << endl;
+        cout<<"Total count of tests: "<<testCount<<endl;
+        cout<<"Couldn't find roots: " << cantFind <<" times "<<endl;
+        cout<<"Mean absMaxError = "<< absErrors / (testCount - cantFind) << endl;
+        cout<<"Max {absMaxError_i | i = 0, ..., 1e6} from all of the tests: "<<maxAbsAllofTest<<endl;
+        cout<<"Mean RelMaxError = "<< relError / (testCount - cantFind)  << endl;
+        cout<<"Max {RelMaxError_i | i = 0, ..., 1e6} all of the tests: "<<maxRelAllofTest<<endl;
     }
 }
-void testCubic(){
-    fp_t a=1.0,b=0.0,c=-4.0, d=-15.0; //  3
-//    fp_t a=1.0,b=6.0,c=14.0, d=15.0; //  -3
-//    fp_t a=1.0,b=103.0,c=305.0, d=500.0; //  -100
-//
-//    fp_t a=2.0,b=58.0,c=190.0, d=-250.0; // 1, -5, -25
-//    fp_t a=-5,b=30,c=225, d=-250; // 1, -5, 10
-//    fp_t a=1.0,b=54.0,c=195.0, d=-250.0; //  1, -5, -250
-//
-//    fp_t a=1.0,b=3.0,c=-9.0, d=5.0; // 1, 1, -5
-//    fp_t a=1.0,b=9.0,c=15.0, d=-25.0; // 1, -5, -5
-//    fp_t a=1.0,b=7.0,c=11.0, d=5.0; // -1, -1, -5
-//
-//    fp_t a=1.0,b=-9.0,c=27.0, d=-27.0; //  3, 3, 3
-//    fp_t a=-125,b=750,c=-1500, d=1000; //  2, 2, 2
-//    fp_t a=1,b=-18,c=108, d=-216; //  -6, -6, -6
-//    fp_t a=1,b=-18.75,c=117.1875, d=-244.140625; //  -6.25, -6.25, -6.25
 
-    vector<fp_t> res3(3);
+// Function to test cubic solution:
+// testCount - total count of tests
+// dist - maximum distance between roots
+template <typename fp_t>
+void testCubicAdv(const int testCount, const fp_t dist){
 
-    int num_of_roots= cubicEqSolution<fp_t>(a,b,c,d,res3);
-    if (num_of_roots==3){
-        cout<<"x1 = "<<res3[0]<<"; x2 = "<<res3[1]<<"; x3 = "<<res3[2]<<endl;
+    int const P = 3; // power, total number of tests
+    int numOfFoundRoots, cantFind = 0, tripleRoot=0;
+
+    fp_t const low=-1, high=1; // [low, high], max distance between clustered roots
+    fp_t absMaxError, relMaxError; // variables for each test Errors
+    fp_t maxAbsAllofTest = -1, maxRelAllofTest = -1; // maximum from maxAbsoluteError and maxRelError from all [testCount] tests
+
+    long double absErrors = 0, relError;
+
+    vector<fp_t> coefficients(P+1);
+    vector<fp_t> trueRoots(P);
+
+    for(int i=0; i < testCount; ++i){
+        vector<fp_t> foundRoots(P);
+
+        generate_polynomial<fp_t>(P, 0, P, 0, dist,
+                                  low, high, trueRoots, coefficients);
+        numOfFoundRoots = cubicEqSolve<fp_t> (coefficients[3],coefficients[2],coefficients[1],coefficients[0], foundRoots);
+
+        if(numOfFoundRoots == 1){
+            cantFind++;
+        }
+        else{
+            compare_roots<fp_t>(numOfFoundRoots, 3, foundRoots, trueRoots, absMaxError, relMaxError);
+            maxAbsAllofTest = absMaxError > maxAbsAllofTest ? absMaxError : maxAbsAllofTest;
+            absErrors += absMaxError;
+            maxRelAllofTest = relMaxError > maxRelAllofTest ? relMaxError : maxRelAllofTest;
+            relError += relMaxError;
+        }
     }
-    else if(num_of_roots){
-        cout<<"x1 = "<<res3[0]<<endl;
+
+    if (PRINT) {
+        cout << "\n\n\t\t\tCUBIC TEST RESULTS\n\n";
+        cout << "Max distance: " << dist << endl;
+        cout << "Total count of tests: " << testCount << endl;
+        cout << "ONLY ONE ROOT: " << cantFind << " times " << endl;
+        cout << "Mean absMaxError = " << absErrors / (testCount - cantFind) << endl;
+        cout << "Max {absMaxError_i | i = 0, ..., 1e6} from all of the tests: " << maxAbsAllofTest << endl;
+        cout << "Mean RelMaxError = " << relError / (testCount - cantFind) << endl;
+        cout << "Max {RelMaxError_i | i = 0, ..., 1e6} all of the tests: " << maxRelAllofTest << endl;
+    }
+    ////////////////////////////////////////
+}
+
+// Function to test quartic solution:
+// testCount - total count of tests
+// dist - maximum distance between roots
+template<typename fp_t>
+void testQuarticAdv(const int testCount, const fp_t dist){
+
+    const int P = 4; // power
+    const fp_t low=-1, high=1; // [low, high]
+    fp_t absMaxError, relMaxError; // variables for each test Errors
+    int numOfFoundRoots, cantFind = 0, twoRoots = 0;
+    fp_t maxAbsAllofTest = -1, maxRelAllofTest = -1; // maximum from maxAbsoluteError and maxRelError from all [testCount] tests
+
+    long double absErrors = 0;
+    long double relError = 0;
+
+    vector<fp_t> coefficients(P+1);
+    vector<fp_t> trueRoots(P);
+
+    for(int i=0; i < testCount; ++i){
+        vector<fp_t> foundRoots(P);
+        generate_polynomial<fp_t>(P, 0, P, 0, dist,
+                                  low, high, trueRoots, coefficients);
+        numOfFoundRoots = quarticEqSolve<fp_t> (coefficients[4], coefficients[3],coefficients[2],coefficients[1],coefficients[0], foundRoots);
+
+        if(!numOfFoundRoots){
+            cantFind++;
+        }
+        else{
+            compare_roots<fp_t>(numOfFoundRoots, 4, foundRoots, trueRoots, absMaxError, relMaxError);
+            maxAbsAllofTest = absMaxError > maxAbsAllofTest ? absMaxError : maxAbsAllofTest;
+            absErrors += absMaxError;
+            maxRelAllofTest = relMaxError > maxRelAllofTest ? relMaxError : maxRelAllofTest;
+            relError += relMaxError;
+        }
+    }
+    if(PRINT){
+        cout<<"\n\n\t\t\tQUARTIC TEST RESULTS\n\n";
+        cout<<"Max distance: "<< dist << endl;
+        cout<<"Total count of tests: "<<testCount<<endl;
+        cout<<"Couldn't find roots: " << cantFind <<" times "<<endl;
+        cout<<"Mean absMaxError = "<< absErrors / (testCount - cantFind) << endl;
+        cout<<"Max {absMaxError_i | i = 0, ..., 1e6} from all of the tests: "<<maxAbsAllofTest<<endl;
+        cout<<"Mean RelMaxError = "<< relError / (testCount - cantFind)  << endl;
+        cout<<"Max {RelMaxError_i | i = 0, ..., 1e6} all of the tests: "<<maxRelAllofTest<<endl;
     }
 }
 
 
 
+int main(){
+    setlocale(LC_ALL, "ru");
+    cout<<setprecision(12);
+    const int testCount = 1000'000; // total number of tests
+    const fp_t dist = 1e-5;  // maximum distance between roots
 
-int main() {
 
-//Quadratic
-//    testQuadratic();
-
-//Cubic equation
-//    testCubic();
-// Quartic
+    testQuadraticAdv<fp_t>(testCount, dist);
+    testCubicAdv<fp_t>(testCount, dist);
+    testQuarticAdv<fp_t>(testCount, dist);
     return 0;
 }
