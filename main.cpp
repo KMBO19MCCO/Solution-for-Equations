@@ -53,7 +53,22 @@ inline complex<fp_t> epsilonComplex(const complex<fp_t> &x)
     return abs(x) * numeric_limits<fp_t>::epsilon() > abs(x.imag()) ? complex<fp_t>(x.real(), 0) : x;
 }
 
+
+
 //______________________            MAIN FUNCTIONS        ______________________
+
+
+// LINEAR: ax + b = 0 => x = -b/a
+// roots - a container to put roots. Size must be >= 1
+// returns: number of real roots
+template<typename fp_t>
+int linearEqSolve(fp_t a, fp_t b, vector<fp_t> &roots){
+    roots[0] = -b / a;
+    if(isinf(roots[0]) || isnan(roots[0]))
+        return 0;
+    return 1;
+}
+
 
 // QUADRATIC: ax^2 + bx + c = 0
 // roots - a container to put roots. Size must be >= 2
@@ -66,8 +81,10 @@ inline complex<fp_t> epsilonComplex(const complex<fp_t> &x)
     // Stable URL: http://www.jstor.org/stable/3028750
 template<typename fp_t>
 int quadraticEqSolve(fp_t a, fp_t b, fp_t c, vector<fp_t> &roots){
+
     // Normalizing
-    if(isinf(b /= a))  return 0;
+    if(isZero(a) || isinf(b /= a))
+        return linearEqSolve(b,c, roots);
     if(isinf(c /= a)) return 0;
     a = 1;
 
@@ -125,12 +142,13 @@ template<typename fp_t>
 int cubicEqSolve(fp_t a, fp_t b, fp_t c, fp_t d, vector<fp_t> &roots){
 
     // Normalizing
-    if(isinf(b /= a)) return 0;
+    if(isZero(a) || isinf(b /= a))
+        return quadraticEqSolve(b,c,d,roots);
     if(isinf(c /= a)) return 0;
     if(isinf(d /= a)) return 0;
     a = 1;
 
-    fp_t e,f,g, h, i, absI, j, tmp;// temp variables that will need for computation several times (>=3)
+    fp_t e, f,g, h, i, absI, j, tmp;// temp variables that will need for computation several times (>=3)
     int numOfRoots = 0; // total number of roots
     // constants
     const fp_t oneThird = static_cast<fp_t>(1.0L/3.0L); // temp var, will use it 7 times
@@ -138,13 +156,12 @@ int cubicEqSolve(fp_t a, fp_t b, fp_t c, fp_t d, vector<fp_t> &roots){
     const fp_t piThird = pi * oneThird;
 
     // temp computations
-    e = b * oneThird;
-    f = fma<fp_t>(-b,e,c);
-    g = fma<fp_t>(-2,pow<fp_t>(e, 3),fma<fp_t>(c,e, -d));
+    e = -b * oneThird;
+    f = fma<fp_t>(b,e,c);
+    g = fma<fp_t>(2,pow<fp_t>(e, 3),fma<fp_t>(c,-e, -d));
     h = sqrt(abs(f) * 4 * oneThird);
-
     if (isZero<fp_t>(f)){// CASE 0: Triple root
-        roots[0] = roots[1] = roots[2] = - e;
+        roots[0] = roots[1] = roots[2] = e;
         return 3;
     }
 
@@ -154,26 +171,26 @@ int cubicEqSolve(fp_t a, fp_t b, fp_t c, fp_t d, vector<fp_t> &roots){
 
     //CASE 1: Only one real root
     if (f > 0){
-        roots[0] = fma<fp_t>(h,sinh(asinh(i) * oneThird),-e);
+        roots[0] = fma<fp_t>(h,sinh(asinh(i) * oneThird),e);
         numOfRoots = 1;
     }
     else if (absI > 1){
         tmp = h * i/absI;
         if(isinf(tmp)) return 0;
-        roots[0] = fma<fp_t>(tmp,cosh(acosh(absI) * oneThird),-e);
+        roots[0] = fma<fp_t>(tmp,cosh(acosh(absI) * oneThird),e);
         numOfRoots = 1;
     }
     else // CASE 2: Three real roots
     {
         j = acos(i) * oneThird;
-        roots[0] = fma<fp_t>(h, cos(j), -e);
-        roots[1] = fma<fp_t>(h, cos(fma<fp_t>(2, piThird, j)), -e);
+        roots[0] = fma<fp_t>(h, cos(j), e);
+        roots[1] = fma<fp_t>(h, cos(fma<fp_t>(2, piThird, j)), e);
         if (isZero(j))
             roots[2] = roots[1];
         else if(isEqual(j, piThird))
             roots[2] = roots[0];
         else
-            roots[2] = fma<fp_t>(h, cos(fma<fp_t>(2, piThird, -j)), -e);
+            roots[2] = fma<fp_t>(h, cos(fma<fp_t>(2, piThird, -j)), e);
         numOfRoots = 3;
     }
     return numOfRoots;
@@ -193,7 +210,8 @@ template<typename fp_t>
 int quarticEqSolve(fp_t a, fp_t b, fp_t c, fp_t d, fp_t e, vector<fp_t> &roots){
 
     // Normalizing
-    if(isinf(b /= a))  return 0;
+    if(isZero(a) || isinf(b /= a))
+        return cubicEqSolve(b,c,d,e,roots);
     if(isinf(c /= a)) return 0;
     if(isinf(d /= a)) return 0;
     if(isinf(e /= a)) return 0;
@@ -395,12 +413,13 @@ void testQuarticAdv(const int testCount, const fp_t dist){
 int main(){
     setlocale(LC_ALL, "ru");
     cout<<setprecision(12);
-    const int testCount = 100'000; // total number of tests
+    const int testCount = 1000'000; // total number of tests
     const fp_t dist = 1e-5;  // maximum distance between roots
 
 
     testQuadraticAdv<fp_t>(testCount, dist);
     testCubicAdv<fp_t>(testCount, dist);
     testQuarticAdv<fp_t>(testCount, dist);
+
     return 0;
 }
