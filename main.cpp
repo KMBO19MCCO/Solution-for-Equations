@@ -66,7 +66,7 @@ template<typename fp_t>
 int linearEqSolve(fp_t a, fp_t b, vector<fp_t> &roots){
     roots[0] = -b / a;
     if(isinf(roots[0]) || isnan(roots[0]))
-    { return 0; }
+        return 0;
     return 1;
 }
 
@@ -85,7 +85,7 @@ int quadraticEqSolve(fp_t a, fp_t b, fp_t c, vector<fp_t> &roots){
 
     // Normalizing
     if(isZero(a) || isinf(b /= a))
-        return linearEqSolve(b,c, roots);
+        return linearEqSolve(b, c, roots);
     if(isinf(c /= a)) return 0;
     a = 1;
 
@@ -144,7 +144,7 @@ int cubicEqSolve(fp_t a, fp_t b, fp_t c, fp_t d, vector<fp_t> &roots){
 
     // Normalizing
     if(isZero(a) || isinf(b /= a))
-        return quadraticEqSolve(b,c,d,roots);
+        return quadraticEqSolve(b, c, d, roots);
     if(isinf(c /= a)) return 0;
     if(isinf(d /= a)) return 0;
     a = 1;
@@ -158,8 +158,8 @@ int cubicEqSolve(fp_t a, fp_t b, fp_t c, fp_t d, vector<fp_t> &roots){
 
     // temp computations
     e = -b * oneThird;
-    f = fma<fp_t>(b,e,c);
-    g = fma<fp_t>(2,pow<fp_t>(e, 3),fma<fp_t>(c,-e, -d));
+    f = fma<fp_t>(b, e, c);
+    g = fma<fp_t>(2, pow<fp_t>(e, 3), fma<fp_t>(c, -e, -d));
     h = sqrt(abs(f) * 4 * oneThird);
     if (isZero<fp_t>(f)){// CASE 0: Triple root
         roots[0] = roots[1] = roots[2] = e;
@@ -172,13 +172,13 @@ int cubicEqSolve(fp_t a, fp_t b, fp_t c, fp_t d, vector<fp_t> &roots){
 
     //CASE 1: Only one real root
     if (f > 0){
-        roots[0] = fma<fp_t>(h,sinh(asinh(i) * oneThird),e);
+        roots[0] = fma<fp_t>(h, sinh(asinh(i) * oneThird), e);
         numOfRoots = 1;
     }
     else if (absI > 1){
         tmp = h * i/absI;
         if(isinf(tmp)) return 0;
-        roots[0] = fma<fp_t>(tmp,cosh(acosh(absI) * oneThird),e);
+        roots[0] = fma<fp_t>(tmp, cosh(acosh(absI) * oneThird), e);
         numOfRoots = 1;
     }
     else // CASE 2: Three real roots
@@ -212,7 +212,7 @@ int quarticEqSolve(fp_t a, fp_t b, fp_t c, fp_t d, fp_t e, vector<fp_t> &roots){
 
     // Normalizing
     if(isZero(a) || isinf(b /= a))
-        return cubicEqSolve(b,c,d,e,roots);
+        return cubicEqSolve(b, c, d, e, roots);
     if(isinf(c /= a)) return 0;
     if(isinf(d /= a)) return 0;
     if(isinf(e /= a)) return 0;
@@ -220,11 +220,14 @@ int quarticEqSolve(fp_t a, fp_t b, fp_t c, fp_t d, fp_t e, vector<fp_t> &roots){
     int numOfRoots = 0; // total number of found roots
 
     // x^4+b*x^3+c*x^2+dx+e  ---> y^4 + cx^2 + dx + e, x = y - b/4
-    preProcessing(b,c,d,e, c, d, e);
+    preProcessing(b, c, d, e, c, d, e);
 
     // getting roots from specific cubic equation
     vector<fp_t> cubicRoots(3);
-    const int cnumOfRoots = cubicEqSolve<fp_t>(a,2*c,pr_product_difference<fp_t>(c,c,4, e),fma<fp_t>(-d, d, 0), cubicRoots);
+    const int cnumOfRoots = cubicEqSolve<fp_t>(a, 2*c,
+                                               pr_product_difference<fp_t>(c, c, 4, e),
+                                                       fma<fp_t>(-d, d, 0),
+                                                               cubicRoots);
 
     // getting a positive root from cubic solution
     fp_t r;
@@ -243,17 +246,17 @@ int quarticEqSolve(fp_t a, fp_t b, fp_t c, fp_t d, fp_t e, vector<fp_t> &roots){
 
     if(isinf(tmp2)) return 0;
 
-    const complex<fp_t> t1 = epsilonComplex<fp_t>(sqrt<fp_t>(fma<fp_t>(-d, tmp2,tmp1)));
-    const complex<fp_t> t2 = epsilonComplex<fp_t>(sqrt<fp_t>(fma<fp_t>(d, tmp2,tmp1)));
+    const complex<fp_t> t1 = epsilonComplex<fp_t>(sqrt<fp_t>(fma<fp_t>(-d, tmp2, tmp1)));
+    const complex<fp_t> t2 = epsilonComplex<fp_t>(sqrt<fp_t>(fma<fp_t>(d, tmp2, tmp1)));
 
     if (isZero(t1.imag())){
-        roots[0] = fma<fp_t>( b , minusOneFourth,fma<fp_t>(r1,oneHalf,t1.real()));
-        roots[1] = fma<fp_t>( b , minusOneFourth,fma<fp_t>(r1,oneHalf,-t1.real()));
+        roots[0] = fma<fp_t>(b , minusOneFourth, fma<fp_t>(r1, oneHalf, t1.real()));
+        roots[1] = fma<fp_t>(b , minusOneFourth, fma<fp_t>(r1, oneHalf, -t1.real()));
         numOfRoots +=2;
     }
     if (isZero(t2.imag())){
-        roots[numOfRoots] = fma<fp_t>( b , minusOneFourth,fma<fp_t>(-r1,oneHalf,t2.real()));
-        roots[numOfRoots + 1] = fma<fp_t>( b , minusOneFourth,fma<fp_t>(-r1,oneHalf,-t2.real()));
+        roots[numOfRoots] = fma<fp_t>(b, minusOneFourth, fma<fp_t>(-r1, oneHalf, t2.real()));
+        roots[numOfRoots + 1] = fma<fp_t>(b, minusOneFourth, fma<fp_t>(-r1, oneHalf, -t2.real()));
         numOfRoots +=2;
     }
     return numOfRoots;
@@ -287,7 +290,7 @@ void testQuadraticAdv(const int testCount, const fp_t dist){
         generate_polynomial<fp_t>(P, 0, 2, 0, dist,
                                   low, high, trueRoots, coefficients);
 
-        numOfFoundRoots = quadraticEqSolve<fp_t>(coefficients[2],coefficients[1],coefficients[0], foundRoots);
+        numOfFoundRoots = quadraticEqSolve<fp_t>(coefficients[2], coefficients[1], coefficients[0], foundRoots);
 
         if(!numOfFoundRoots){
             cantFind++;
@@ -335,7 +338,7 @@ void testCubicAdv(const int testCount, const fp_t dist){
 
         generate_polynomial<fp_t>(P, 0, P, 0, dist,
                                   low, high, trueRoots, coefficients);
-        numOfFoundRoots = cubicEqSolve<fp_t> (coefficients[3],coefficients[2],coefficients[1],coefficients[0], foundRoots);
+        numOfFoundRoots = cubicEqSolve<fp_t> (coefficients[3], coefficients[2], coefficients[1], coefficients[0], foundRoots);
 
         if(numOfFoundRoots == 1){
             cantFind++;
@@ -384,7 +387,7 @@ void testQuarticAdv(const int testCount, const fp_t dist){
         vector<fp_t> foundRoots(P);
         generate_polynomial<fp_t>(P, 0, P, 0, dist,
                                   low, high, trueRoots, coefficients);
-        numOfFoundRoots = quarticEqSolve<fp_t> (coefficients[4], coefficients[3],coefficients[2],coefficients[1],coefficients[0], foundRoots);
+        numOfFoundRoots = quarticEqSolve<fp_t> (coefficients[4], coefficients[3], coefficients[2], coefficients[1], coefficients[0], foundRoots);
 
         if(!numOfFoundRoots){
             cantFind++;
