@@ -1,5 +1,6 @@
 // Written by: Pashshoev Bakhtierzhon KMBO-04-19
 // Contains functions to solve ______ equations:
+    // LINEAR ------> linearEqSolve(a, b, &roots)
     // QUADRATIC ---> quadraticEqSolve(a, b, c, &roots)
     // CUBIC -------> cubicEqSolve(a, b, c, d, &roots)
     // QUARTIC -----> quarticEqSolve(a, b, c, d, e, &roots)
@@ -65,7 +66,7 @@ template<typename fp_t>
 int linearEqSolve(fp_t a, fp_t b, vector<fp_t> &roots){
     roots[0] = -b / a;
     if(isinf(roots[0]) || isnan(roots[0]))
-        return 0;
+    { return 0; }
     return 1;
 }
 
