@@ -1,5 +1,5 @@
 // Written by: Pashshoev Bakhtierzhon KMBO-04-19
-// Contains functions to solve ______ equations:
+// Contains functions for solving ______ equations:
     // LINEAR ------> linearEqSolve(a, b, &roots)
     // QUADRATIC ---> quadraticEqSolve(a, b, c, &roots)
     // CUBIC -------> cubicEqSolve(a, b, c, d, &roots)
@@ -33,7 +33,7 @@ template<typename  fp_t>
 inline bool isZero( const fp_t &x )
 { return FP_ZERO == std::fpclassify(x); }
 
-// Suppression cubic member of quartic
+// Suppression of the cubic member of the quartic
 // x^4+b*x^3+c*x^2+dx+e  ---> y^4 + px^2 + qx + r, x = y - b/4
 template<typename fp_t>
 inline void preProcessing(fp_t  b, fp_t  c, fp_t d, fp_t  e, fp_t & p, fp_t &q,fp_t &r ){
@@ -47,7 +47,7 @@ inline void preProcessing(fp_t  b, fp_t  c, fp_t d, fp_t  e, fp_t & p, fp_t &q,f
                                                           fma<fp_t>(static_cast<fp_t>(-0.1875L)*b, b, c),-d), e);
 }
 
-// Flexible suppression imaginary part of complex number
+// Flexible suppression of the imaginary part of a complex number
 template<typename fp_t>
 inline complex<fp_t> epsilonComplex(const complex<fp_t> &x)
 {
@@ -149,14 +149,14 @@ int cubicEqSolve(fp_t a, fp_t b, fp_t c, fp_t d, vector<fp_t> &roots){
     if(isinf(d /= a)) return 0;
     a = 1;
 
-    fp_t e, f,g, h, i, absI, j, tmp;// temp variables that will need for computation several times (>=3)
+    fp_t e, f,g, h, i, absI, j, tmp;// temp variables that will be needed for calculation several times (>=3)
     int numOfRoots = 0; // total number of roots
     // constants
     const fp_t oneThird = static_cast<fp_t>(1.0L/3.0L); // temp var, will use it 7 times
     const fp_t pi = static_cast<fp_t>(numbers::pi);
     const fp_t piThird = pi * oneThird;
 
-    // temp computations
+    // temp calculations
     e = -b * oneThird;
     f = fma<fp_t>(b, e, c);
     g = fma<fp_t>(2, pow<fp_t>(e, 3), fma<fp_t>(c, -e, -d));
@@ -222,7 +222,7 @@ int quarticEqSolve(fp_t a, fp_t b, fp_t c, fp_t d, fp_t e, vector<fp_t> &roots){
     // x^4+b*x^3+c*x^2+dx+e  ---> y^4 + cx^2 + dx + e, x = y - b/4
     preProcessing(b, c, d, e, c, d, e);
 
-    // getting roots from specific cubic equation
+    // getting roots from the specific cubic equation
     vector<fp_t> cubicRoots(3);
     const int cnumOfRoots = cubicEqSolve<fp_t>(a, 2*c,
                                                pr_product_difference<fp_t>(c, c, 4, e),
@@ -267,7 +267,7 @@ int quarticEqSolve(fp_t a, fp_t b, fp_t c, fp_t d, fp_t e, vector<fp_t> &roots){
 //______________________            TESTER FUNCTIONS        ______________________
 
 
-// Function to test quadratic solution:
+// Function for testing the quadratic solution:
 // testCount - total count of tests
 // dist - maximum distance between roots
 template<typename fp_t>
@@ -315,7 +315,7 @@ void testQuadraticAdv(const int testCount, const fp_t dist){
     }
 }
 
-// Function to test cubic solution:
+// Function for testing the cubic solution:
 // testCount - total count of tests
 // dist - maximum distance between roots
 template <typename fp_t>
@@ -365,7 +365,7 @@ void testCubicAdv(const int testCount, const fp_t dist){
     ////////////////////////////////////////
 }
 
-// Function to test quartic solution:
+// Function for testing the quartic solution:
 // testCount - total count of tests
 // dist - maximum distance between roots
 template<typename fp_t>
@@ -418,8 +418,7 @@ int main(){
     setlocale(LC_ALL, "ru");
     cout<<setprecision(12);
     const int testCount = 1000'000; // total number of tests
-    const fp_t dist = 1e-5;  // maximum distance between roots
-
+    const fp_t dist = 1e-5;  // maximum distance between clustered roots
 
     testQuadraticAdv<fp_t>(testCount, dist);
     testCubicAdv<fp_t>(testCount, dist);
