@@ -65,7 +65,7 @@ inline complex<fp_t> epsilonComplex(const complex<fp_t> &x)
 template<typename fp_t>
 int linearEqSolve(fp_t a, fp_t b, vector<fp_t> &roots){
     roots[0] = -b / a;
-    if(isinf(roots[0]) || isnan(roots[0]))
+    if(isnan(roots[0]) || isinf(roots[0]))
         return 0;
     return 1;
 }
@@ -100,7 +100,8 @@ int quadraticEqSolve(fp_t a, fp_t b, fp_t c, vector<fp_t> &roots){
     if (c < 0){
         sqrC = sqrt(-c);
         tmp = -b/(2 * sqrC);
-        if(isinf(tmp)) return 0;// check if there is no inf
+        if(isnan(tmp) || isinf(tmp))
+            return 0;
         alfa = epsilonComplex<fp_t>(-atan<fp_t>(tmp));
 
         if (! alfa.imag()) {
@@ -108,7 +109,8 @@ int quadraticEqSolve(fp_t a, fp_t b, fp_t c, vector<fp_t> &roots){
             roots[0] = -sqrC * tang;
             roots[1]= sqrC / tang;
 
-            if(isinf(roots[1])) return 1; // check if there is no inf
+            if(isnan(roots[1]) || isinf(roots[1]))
+                return 1;
             return 2;
         }
         return 0; // No real roots
@@ -116,7 +118,8 @@ int quadraticEqSolve(fp_t a, fp_t b, fp_t c, vector<fp_t> &roots){
     else if (abs(b) >= 2 * sqrt(c)){
         sqrC = sqrt(c);
         tmp = -2 * sqrC / b;
-        if(isinf(tmp)) return 0; // check if there is no inf
+        if(isnan(tmp) || isinf(tmp))
+            return 0;
         alfa = epsilonComplex(asin<fp_t>(tmp));
         tang = tan(alfa.real() * oneHalf);
 
@@ -124,7 +127,8 @@ int quadraticEqSolve(fp_t a, fp_t b, fp_t c, vector<fp_t> &roots){
             roots[0] = sqrC * tang;
             roots[1] = sqrC / tang;
 
-            if(isinf(roots[1])) return 1; // check if there is no inf
+            if(isnan(roots[1]) || isinf(roots[1]))
+                return 1; // check if there is no inf
             return 2;
         }
         return 0; // No real roots
@@ -168,7 +172,8 @@ int cubicEqSolve(fp_t a, fp_t b, fp_t c, fp_t d, vector<fp_t> &roots){
 
     i = 4 * g / pow<fp_t>(h, 3);
     absI = abs(i);
-    if (isinf(i)) return 0; // checking for inf
+    if (isnan(i) || isinf(i))
+        return 0;
 
     //CASE 1: Only one real root
     if (f > 0){
@@ -177,7 +182,8 @@ int cubicEqSolve(fp_t a, fp_t b, fp_t c, fp_t d, vector<fp_t> &roots){
     }
     else if (absI > 1){
         tmp = h * i/absI;
-        if(isinf(tmp)) return 0;
+        if(isnan(tmp) || isinf(tmp))
+            return 0;
         roots[0] = fma<fp_t>(tmp, cosh(acosh(absI) * oneThird), e);
         numOfRoots = 1;
     }
@@ -244,7 +250,8 @@ int quarticEqSolve(fp_t a, fp_t b, fp_t c, fp_t d, fp_t e, vector<fp_t> &roots){
     const fp_t tmp1 = pr_product_difference<fp_t>(r, minusOneFourth, c, oneHalf);
     const fp_t tmp2 = 1/(2 * r1);
 
-    if(isinf(tmp2)) return 0;
+    if(isnan(tmp2) || isinf(tmp2))
+        return 0;
 
     const complex<fp_t> t1 = epsilonComplex<fp_t>(sqrt<fp_t>(fma<fp_t>(-d, tmp2, tmp1)));
     const complex<fp_t> t2 = epsilonComplex<fp_t>(sqrt<fp_t>(fma<fp_t>(d, tmp2, tmp1)));
@@ -417,7 +424,7 @@ void testQuarticAdv(const int testCount, const fp_t dist){
 int main(){
     setlocale(LC_ALL, "ru");
     cout<<setprecision(12);
-    const int testCount = 1000'000; // total number of tests
+    const int testCount = 1'000'000; // total number of tests
     const fp_t dist = 1e-5;  // maximum distance between clustered roots
 
     testQuadraticAdv<fp_t>(testCount, dist);
